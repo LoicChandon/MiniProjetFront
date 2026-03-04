@@ -1,11 +1,25 @@
-<script setup></script>
+<script setup>
+import MedicamentsList from './components/MedicamentsList.vue'
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <v-app>
+    <v-app-bar color="primary" density="comfortable" elevation="2">
+      <v-app-bar-title>
+        <v-icon class="mr-1">mdi-hospital-box</v-icon>
+        PharmAdmin
+      </v-app-bar-title>
+    </v-app-bar>
+>
+    <v-main class="bg-grey-lighten-4">
+      <MedicamentsList />
+    </v-main>
+  </v-app>
 </template>
 
-<style scoped></style>
+<style>
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+}
+</style>
