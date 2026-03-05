@@ -11,7 +11,7 @@ import ListeMedicaments from './components/ListeMedicaments.vue'
       </v-app-bar-title>
     </v-app-bar>
 >
-    <v-main class="bg-grey-lighten-4">
+    <v-main class="fond-pharmacie">
       <ListeMedicaments />
     </v-main>
   </v-app>
@@ -21,5 +21,18 @@ import ListeMedicaments from './components/ListeMedicaments.vue'
 body {
   margin: 0;
   font-family: 'Roboto', sans-serif;
+}
+
+/* .fond-pharmacie {
+  background: 
+    linear-gradient(rgba(245, 245, 245, 0.80), rgba(245, 245, 245, 0.80)),
+    url('/Aisle-of-pharmacy-e1569376043853.jpg') center / cover no-repeat fixed;
+  min-height: 100vh;
+} */
+ .fond-pharmacie {
+  background: 
+    linear-gradient(rgba(245, 245, 245, 0.80), rgba(245, 245, 245, 0.80)),
+    url('/alpes-elevation.jpeg') center / cover no-repeat fixed;
+  min-height: 100vh;
 }
 </style>
