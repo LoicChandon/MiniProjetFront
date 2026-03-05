@@ -1,5 +1,5 @@
 <script setup>
-import MedicamentsList from './components/MedicamentsList.vue'
+import ListeMedicaments from './components/ListeMedicaments.vue'
 </script>
 
 <template>
@@ -7,12 +7,12 @@ import MedicamentsList from './components/MedicamentsList.vue'
     <v-app-bar color="primary" density="comfortable" elevation="2">
       <v-app-bar-title>
         <v-icon class="mr-1">mdi-hospital-box</v-icon>
-        PharmAdmin
+        PharmaSavoie (73 représente)
       </v-app-bar-title>
     </v-app-bar>
 >
     <v-main class="bg-grey-lighten-4">
-      <MedicamentsList />
+      <ListeMedicaments />
     </v-main>
   </v-app>
 </template>
