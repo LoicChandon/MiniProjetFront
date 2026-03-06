@@ -156,7 +156,7 @@ async function declencherReapprovisionnement() {
     const mailsEnvoyes = res.data
     if (mailsEnvoyes.length > 0) {
       afficherNotif(
-        `📧 ${mailsEnvoyes.length} mail(s) de réapprovisionnement envoyé(s) aux fournisseurs`,
+        `${mailsEnvoyes.length} mail(s) de réapprovisionnement envoyé(s) aux fournisseurs`,
         'warning'
       )
     }
