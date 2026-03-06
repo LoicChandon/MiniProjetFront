@@ -80,6 +80,11 @@ async function majQuantite(med, delta) {
     )
     med.unitesEnStock = newQty
     afficherNotif(`Stock mis à jour : ${med.nom} → ${newQty}`)
+
+    // Si le nouveau stock passe sous le seuil, déclencher le réapprovisionnement
+    if (newQty <= med.niveauDeReappro) {
+      await declencherReapprovisionnement()
+    }
   } catch (err) {
     console.error(err)
     afficherNotif('Erreur lors de la mise à jour du stock', 'error')
@@ -113,6 +118,11 @@ async function enregistrerModif(donnees) {
     }
     dialogModif.value = false
     afficherNotif(`${donnees.nom} modifié avec succès`)
+
+    // Si le stock modifié est sous le seuil, déclencher le réapprovisionnement
+    if (donnees.unitesEnStock <= donnees.niveauDeReappro) {
+      await declencherReapprovisionnement()
+    }
   } catch (err) {
     console.error(err)
     afficherNotif('Erreur lors de la modification', 'error')
@@ -136,6 +146,23 @@ async function supprimerMedicament() {
   } catch (err) {
     console.error(err)
     afficherNotif('Erreur lors de la suppression', 'error')
+  }
+}
+
+// Appel réapprovisionnement du back et notifie l'user
+async function declencherReapprovisionnement() {
+  try {
+    const res = await axios.post(`${API_BASE}/reapprovisionnement/notifier`)
+    const mailsEnvoyes = res.data
+    if (mailsEnvoyes.length > 0) {
+      afficherNotif(
+        `📧 ${mailsEnvoyes.length} mail(s) de réapprovisionnement envoyé(s) aux fournisseurs`,
+        'warning'
+      )
+    }
+  } catch (err) {
+    console.error('Erreur réapprovisionnement :', err)
+    afficherNotif('Erreur lors du réapprovisionnement automatique', 'error')
   }
 }
 
