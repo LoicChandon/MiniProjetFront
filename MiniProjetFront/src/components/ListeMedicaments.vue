@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
 import Medicament from './Medicament.vue'
 import PopupAjout from './PopupAjout.vue'
 import PopupModification from './PopupModification.vue'
@@ -40,15 +39,19 @@ async function chargerMedicaments() {
   chargement.value = true
   erreur.value = null
   try {
-    const response = await axios.get(`${API_BASE}/medicaments?size=200`)
-    const meds = response.data._embedded.medicaments
+    const response = await fetch(`${API_BASE}/medicaments?size=200`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const responseData = await response.json()
+    const meds = responseData._embedded.medicaments
 
     // Récup des categories (asynchrone pour eviter de bloquer l'affichage)
     const medsWithCategories = await Promise.all(
       meds.map(async (med) => {
         try {
-          const catResponse = await axios.get(med._links.categorie.href)
-          med.categorieLibelle = catResponse.data.libelle
+          const catResponse = await fetch(med._links.categorie.href)
+          if (!catResponse.ok) throw new Error(`HTTP ${catResponse.status}`)
+          const catData = await catResponse.json()
+          med.categorieLibelle = catData.libelle
         } catch {
           med.categorieLibelle = '—'
         }
@@ -73,11 +76,12 @@ async function majQuantite(med, delta) {
   if (newQty < 0) return
 
   try {
-    await axios.patch(
-      `${API_BASE}/medicaments/${med.id}`,
-      { unitesEnStock: newQty },
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+    const patchRes = await fetch(`${API_BASE}/medicaments/${med.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unitesEnStock: newQty })
+    })
+    if (!patchRes.ok) throw new Error(`HTTP ${patchRes.status}`)
     med.unitesEnStock = newQty
     afficherNotif(`Stock mis à jour : ${med.nom} → ${newQty}`)
 
@@ -100,17 +104,18 @@ function ouvrirModif(med) {
 async function enregistrerModif(donnees) {
   enregistrement.value = true
   try {
-    await axios.patch(
-      `${API_BASE}/medicaments/${donnees.id}`,
-      {
+    const modifRes = await fetch(`${API_BASE}/medicaments/${donnees.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         nom: donnees.nom,
         prixUnitaire: donnees.prixUnitaire,
         unitesEnStock: donnees.unitesEnStock,
         quantiteParUnite: donnees.quantiteParUnite,
         imageURL: donnees.imageURL,
-      },
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+      })
+    })
+    if (!modifRes.ok) throw new Error(`HTTP ${modifRes.status}`)
     // maj des donnees locales
     const idx = medicaments.value.findIndex((m) => m.id === donnees.id)
     if (idx !== -1) {
@@ -139,7 +144,8 @@ function confirmerSuppression(med) {
 //suppr medicament
 async function supprimerMedicament() {
   try {
-    await axios.delete(`${API_BASE}/medicaments/${medASupprimer.value.id}`)
+    const delRes = await fetch(`${API_BASE}/medicaments/${medASupprimer.value.id}`, { method: 'DELETE' })
+    if (!delRes.ok) throw new Error(`HTTP ${delRes.status}`)
     medicaments.value = medicaments.value.filter((m) => m.id !== medASupprimer.value.id)
     dialogSuppression.value = false
     afficherNotif(`${medASupprimer.value.nom} supprimé`)
@@ -152,8 +158,9 @@ async function supprimerMedicament() {
 // Appel réapprovisionnement du back et notifie l'user
 async function declencherReapprovisionnement() {
   try {
-    const res = await axios.post(`${API_BASE}/reapprovisionnement/notifier`)
-    const mailsEnvoyes = res.data
+    const res = await fetch(`${API_BASE}/reapprovisionnement/notifier`, { method: 'POST' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const mailsEnvoyes = await res.json()
     if (mailsEnvoyes.length > 0) {
       afficherNotif(
         `${mailsEnvoyes.length} mail(s) de réapprovisionnement envoyé(s) aux fournisseurs`,
@@ -199,27 +206,13 @@ onMounted(chargerMedicaments)
         </p>
       </v-col>
       <v-col cols="auto" class="d-flex align-center">
-        <v-btn
-          color="success"
-          variant="flat"
-          prepend-icon="mdi-plus"
-          rounded
-          @click="dialogAjout = true"
-        >
+        <v-btn color="success" variant="flat" prepend-icon="mdi-plus" rounded @click="dialogAjout = true">
           Ajouter
         </v-btn>
       </v-col>
       <v-col cols="12" md="4">
-        <v-text-field
-          v-model="recherche"
-          prepend-inner-icon="mdi-magnify"
-          label="Rechercher un médicament…"
-          variant="outlined"
-          density="comfortable"
-          hide-details
-          clearable
-          rounded
-        />
+        <v-text-field v-model="recherche" prepend-inner-icon="mdi-magnify" label="Rechercher un médicament…"
+          variant="outlined" density="comfortable" hide-details clearable rounded />
       </v-col>
     </v-row>
 
@@ -237,61 +230,29 @@ onMounted(chargerMedicaments)
 
     <!-- liste mdicaments -->
     <v-row v-else>
-      <v-col
-        v-for="med in medicamentsFiltres()"
-        :key="med.id"
-        cols="12"
-        sm="6"
-        md="4"
-        lg="3"
-      >
-        <Medicament
-          :med="med"
-          @maj-quantite="majQuantite"
-          @ouvrir-modif="ouvrirModif"
-          @confirmer-suppression="confirmerSuppression"
-        />
+      <v-col v-for="med in medicamentsFiltres()" :key="med.id" cols="12" sm="6" md="4" lg="3">
+        <Medicament :med="med" @maj-quantite="majQuantite" @ouvrir-modif="ouvrirModif"
+          @confirmer-suppression="confirmerSuppression" />
       </v-col>
 
       <v-col v-if="medicamentsFiltres().length === 0" cols="12">
-        <v-empty-state
-          icon="mdi-pill-off"
-          title="Aucun médicament trouvé"
-          text="Essayez de modifier votre recherche."
-        />
+        <v-empty-state icon="mdi-pill-off" title="Aucun médicament trouvé"
+          text="Essayez de modifier votre recherche." />
       </v-col>
     </v-row>
 
     <!-- ajout -->
-    <PopupAjout
-      :visible="dialogAjout"
-      @fermer="dialogAjout = false"
-      @ajoute="onMedicamentAjoute"
-      @erreur="(msg) => afficherNotif(msg, 'error')"
-    />
+    <PopupAjout :visible="dialogAjout" @fermer="dialogAjout = false" @ajoute="onMedicamentAjoute"
+      @erreur="(msg) => afficherNotif(msg, 'error')" />
 
     <!-- modif -->
-    <PopupModification
-      :visible="dialogModif"
-      :medicament="medEnCours"
-      :enregistrement="enregistrement"
-      @annuler="dialogModif = false"
-      @enregistrer="enregistrerModif"
-    />
+    <PopupModification :visible="dialogModif" :medicament="medEnCours" :enregistrement="enregistrement"
+      @annuler="dialogModif = false" @enregistrer="enregistrerModif" />
 
     <!-- suppression -->
-    <PopupSuppression
-      :visible="dialogSuppression"
-      :medicament="medASupprimer"
-      @annuler="dialogSuppression = false"
-      @confirmer="supprimerMedicament"
-    />
+    <PopupSuppression :visible="dialogSuppression" :medicament="medASupprimer" @annuler="dialogSuppression = false"
+      @confirmer="supprimerMedicament" />
 
-    <Notification
-      :visible="notification"
-      :texte="notifTexte"
-      :couleur="notifCouleur"
-      @fermer="notification = false"
-    />
+    <Notification :visible="notification" :texte="notifTexte" :couleur="notifCouleur" @fermer="notification = false" />
   </v-container>
 </template>

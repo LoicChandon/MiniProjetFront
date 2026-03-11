@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
 
 const API_BASE = 'https://miniprojetbackisis.onrender.com/api'
 
@@ -30,8 +29,10 @@ const formulaire = ref({
 async function chargerCategories() {
   chargementCategories.value = true
   try {
-    const response = await axios.get(`${API_BASE}/categories?size=50`)
-    categories.value = response.data._embedded.categories.map((cat) => {
+    const response = await fetch(`${API_BASE}/categories?size=50`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    categories.value = data._embedded.categories.map((cat) => {
       const href = cat._links.self.href
       const code = href.substring(href.lastIndexOf('/') + 1)
       return { code, libelle: cat.libelle }
@@ -64,9 +65,10 @@ async function soumettre() {
   enregistrement.value = true
   try {
     // creation du medicament
-    const response = await axios.post(
-      `${API_BASE}/medicaments`,
-      {
+    const response = await fetch(`${API_BASE}/medicaments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         nom: formulaire.value.nom,
         quantiteParUnite: formulaire.value.quantiteParUnite,
         prixUnitaire: formulaire.value.prixUnitaire,
@@ -76,11 +78,12 @@ async function soumettre() {
         indisponible: false,
         imageURL: formulaire.value.imageURL,
         categorie: `${API_BASE}/categories/${formulaire.value.categorieCode}`
-      },
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+      })
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
 
-    emit('ajoute', response.data)
+    emit('ajoute', data)
     fermer()
   } catch (err) {
     console.error('Erreur lors de l\'ajout', err)
@@ -111,87 +114,39 @@ onMounted(chargerCategories)
 
       <!-- Mise en page du formulaire -->
       <v-card-text class="pa-4">
-        <v-text-field
-          v-model="formulaire.nom"
-          label="Nom du médicament"
-          variant="outlined"
-          density="comfortable"
-          class="mb-3"
-        />
+        <v-text-field v-model="formulaire.nom" label="Nom du médicament" variant="outlined" density="comfortable"
+          class="mb-3" />
 
-        <v-select
-          v-model="formulaire.categorieCode"
-          :items="categories"
-          item-title="libelle"
-          item-value="code"
-          label="Catégorie"
-          variant="outlined"
-          density="comfortable"
-          class="mb-3"
-          :loading="chargementCategories"
-        />
+        <v-select v-model="formulaire.categorieCode" :items="categories" item-title="libelle" item-value="code"
+          label="Catégorie" variant="outlined" density="comfortable" class="mb-3" :loading="chargementCategories" />
 
-        <v-text-field
-          v-model="formulaire.quantiteParUnite"
-          label="Quantité par unité (ex: Boîte de 16 comprimés)"
-          variant="outlined"
-          density="comfortable"
-          class="mb-3"
-        />
+        <v-text-field v-model="formulaire.quantiteParUnite" label="Quantité par unité (ex: Boîte de 16 comprimés)"
+          variant="outlined" density="comfortable" class="mb-3" />
 
         <v-row class="mb-1">
           <v-col cols="6">
-            <v-text-field
-              v-model.number="formulaire.prixUnitaire"
-              label="Prix unitaire (€)"
-              type="number"
-              variant="outlined"
-              density="comfortable"
-              step="0.01"
-              min="0"
-            />
+            <v-text-field v-model.number="formulaire.prixUnitaire" label="Prix unitaire (€)" type="number"
+              variant="outlined" density="comfortable" step="0.01" min="0" />
           </v-col>
           <v-col cols="6">
-            <v-text-field
-              v-model.number="formulaire.unitesEnStock"
-              label="Stock initial"
-              type="number"
-              variant="outlined"
-              density="comfortable"
-              min="0"
-            />
+            <v-text-field v-model.number="formulaire.unitesEnStock" label="Stock initial" type="number"
+              variant="outlined" density="comfortable" min="0" />
           </v-col>
         </v-row>
 
-        <v-text-field
-          v-model.number="formulaire.niveauDeReappro"
-          label="Seuil de réapprovisionnement"
-          type="number"
-          variant="outlined"
-          density="comfortable"
-          class="mb-3"
-          min="0"
-        />
+        <v-text-field v-model.number="formulaire.niveauDeReappro" label="Seuil de réapprovisionnement" type="number"
+          variant="outlined" density="comfortable" class="mb-3" min="0" />
 
-        <v-text-field
-          v-model="formulaire.imageURL"
-          label="URL de l'image (optionnel)"
-          variant="outlined"
-          density="comfortable"
-        />
+        <v-text-field v-model="formulaire.imageURL" label="URL de l'image (optionnel)" variant="outlined"
+          density="comfortable" />
       </v-card-text>
 
       <v-divider />
       <v-card-actions class="pa-4">
         <v-spacer />
         <v-btn variant="text" @click="fermer">Annuler</v-btn>
-        <v-btn
-          color="success"
-          variant="flat"
-          :loading="enregistrement"
-          :disabled="!formulaireValide()"
-          @click="soumettre"
-        >
+        <v-btn color="success" variant="flat" :loading="enregistrement" :disabled="!formulaireValide()"
+          @click="soumettre">
           Ajouter
         </v-btn>
       </v-card-actions>
